@@ -23,6 +23,7 @@ model Restaurant {
   menuCategories MenuCategory[]
   products       Product[]
   orders         Order[]
+  orderCounters  OrderCounter[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }
@@ -31,7 +32,7 @@ model MenuCategory {
   id           String     @id @default(uuid())
   name         String
   restaurantId String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   products     Product[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -45,9 +46,9 @@ model Product {
   imageUrl       String
   ingredients    String[]
   restaurantId   String
-  restaurant     Restaurant   @relation(fields: [restaurantId], references: [id])
+  restaurant     Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   menuCategoryId String
-  menuCategory   MenuCategory @relation(fields: [menuCategoryId], references: [id])
+  menuCategory   MenuCategory @relation(fields: [menuCategoryId], references: [id], onDelete: Restrict)
   orderItems     OrderItem[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -61,7 +62,7 @@ model Order {
   businessDay DateTime @db.Date
 
   restaurantId String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
 
   consumptionType ConsumptionType @default(dine_in)
   status          OrderStatus     @default(pending)
@@ -92,7 +93,7 @@ model OrderItem {
 
   // Referência ao produto + snapshot do momento da compra
   productId        String
-  product          Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product          Product @relation(fields: [productId], references: [id], onDelete: NoAction)
   productName      String
   unitPriceInCents Int
   quantity         Int
@@ -109,8 +110,9 @@ model OrderItem {
 // Contador atômico para gerar a senha por restaurante/dia
 model OrderCounter {
   restaurantId String
-  businessDay  DateTime @db.Date
-  lastNumber   Int      @default(0)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  businessDay  DateTime   @db.Date
+  lastNumber   Int        @default(0)
 
   @@id([restaurantId, businessDay])
 }

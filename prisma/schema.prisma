@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Restaurant {
+  id             String         @id @default(uuid())
+  name           String
+  slug           String         @unique
+  description    String
+  avatarImageUrl String
+  coverImageUrl  String
+  menuCategories MenuCategory[]
+  products       Product[]
+  orders         Order[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model MenuCategory {
+  id           String     @id @default(uuid())
+  name         String
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  products     Product[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Product {
+  id             String       @id @default(uuid())
+  name           String
+  description    String
+  priceInCents   Int
+  imageUrl       String
+  ingredients    String[]
+  restaurantId   String
+  restaurant     Restaurant   @relation(fields: [restaurantId], references: [id])
+  menuCategoryId String
+  menuCategory   MenuCategory @relation(fields: [menuCategoryId], references: [id])
+  orderItems     OrderItem[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Order {
+  id String @id @default(uuid())
+
+  // Senha exibida ao cliente. Reinicia por restaurante e por dia operacional.
+  number      Int
+  businessDay DateTime @db.Date
+
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+
+  consumptionType ConsumptionType @default(dine_in)
+  status          OrderStatus     @default(pending)
+
+  // Cliente opcional (self-checkout)
+  customerName  String?
+  customerEmail String?
+  customerPhone String?
+
+  // Dinheiro em centavos
+  totalPriceInCents Int
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([restaurantId, businessDay, number])
+  @@index([restaurantId, status])
+  @@index([restaurantId, createdAt])
+}
+
+model OrderItem {
+  id String @id @default(uuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Referência ao produto + snapshot do momento da compra
+  productId        String
+  product          Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productName      String
+  unitPriceInCents Int
+  quantity         Int
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// Contador atômico para gerar a senha por restaurante/dia
+model OrderCounter {
+  restaurantId String
+  businessDay  DateTime @db.Date
+  lastNumber   Int      @default(0)
+
+  @@id([restaurantId, businessDay])
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  preparing
+  ready
+  completed
+  cancelled
+}
+
+enum ConsumptionType {
+  dine_in
+  take_away
+  delivery
+}

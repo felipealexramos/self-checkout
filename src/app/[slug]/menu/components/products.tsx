@@ -12,7 +12,7 @@ const Products = ({ products }: ProductsProps) => {
             {products.map(product => (
                 <Link
                     key={product.id}
-                    href={`/products/${product.id}`}
+                    href={`/slug/menu/${product.id}`}
                     className="flex items-center justify-between gap-10 py-3 border-b"
                 >
                     <div>
